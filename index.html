@@ -1,0 +1,320 @@
+<!DOCTYPE html> 
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>Universo Interior</title>
+<style>
+html,body{            
+    margin:0;
+    padding:0;
+    background:black;
+    overflow:hidden;
+}
+canvas{display:block;}
+</style>
+</head>
+<body>
+
+<canvas id="c"></canvas>
+
+<script>
+const canvas = document.getElementById("c");
+const ctx = canvas.getContext("2d");
+
+/* ===== LINK SPOTIFY (ACTUALIZADO) ===== */
+const spotifyLink = "https://open.spotify.com/track/3og4Q2XDHXowizKTDdn9vO?si=LIf6Y6upQzSpBXo1qNKPIA";
+
+/* ===== RESIZE ===== */
+function resize(){
+    canvas.width = innerWidth;
+    canvas.height = innerHeight;
+}
+resize();
+window.addEventListener("resize", resize);
+
+/* ===== ESTADO ===== */
+let iniciado=false;
+let mostrarMensajeSol=false;
+let tiempoMensaje=0;
+
+/* ===== ESTRELLAS ===== */
+const estrellas = Array.from({length:260},()=>({
+    x:Math.random()*innerWidth,
+    y:Math.random()*innerHeight,
+    r:Math.random()*1.5
+}));
+
+/* ===== COMETAS ===== */
+const cometas=[];
+function crearCometa(){
+    const lado=Math.floor(Math.random()*4);
+    let x,y,ang;
+
+    if(lado===0){ x=-50; y=Math.random()*canvas.height; ang=0; }
+    if(lado===1){ x=canvas.width+50; y=Math.random()*canvas.height; ang=Math.PI; }
+    if(lado===2){ x=Math.random()*canvas.width; y=-50; ang=Math.PI/2; }
+    if(lado===3){ x=Math.random()*canvas.width; y=canvas.height+50; ang=-Math.PI/2; }
+
+    cometas.push({
+        x,y,
+        ang:ang+(Math.random()-0.5)*0.6,
+        vel:3+Math.random()*3,
+        life:900
+    });
+}
+
+/* ===== SOL ===== */
+const sol={
+    x:()=>canvas.width/2,
+    y:()=>canvas.height/2,
+    r:130
+};
+
+/* ===== EXPLOSIÓN ===== */
+const particulas=[];
+function explosion(x,y){
+    for(let i=0;i<120;i++){
+        const a=Math.random()*Math.PI*2;
+        const v=2+Math.random()*5;
+        particulas.push({
+            x,y,
+            vx:Math.cos(a)*v,
+            vy:Math.sin(a)*v,
+            life:60,
+            r:2+Math.random()*3
+        });
+    }
+}
+
+/* ===== FRASES (366 ÚNICAS) ===== */
+const frases = [];
+const palabras = ["Lo lograste","Aquí sigues","Te amaste","Sonreíste","No te rendiste ❤️","Fuiste fuerte","Sanaste ❤️","Aprendiste","Resististe","Elegiste vivir","Brillaste","Fuiste tú","Elegiste seguir ❤️","Aquí estás","Valió la pena","No lloraste","Avanzaste","Te elegiste","Sigue brillando","Eres increíble","Confiaste en ti","Te superaste","Diste lo mejor","Fuiste valiente","Mantente positivo","Creciste","Disfrutaste","Inspiras","Te cuidaste","Triunfaste","Te perdonaste","Eres luz","Hiciste historia","Te aceptaste","Ríes más","Sientes paz","Te conectaste","Te transformaste","Lograste paz","Eres único","Brillas siempre","Te elevaste","Te enfocaste","Te entendiste","Celebraste","Te respetaste","Avanzaste fuerte","Creaste magia","Te liberaste","Diste amor","Te cuidaste","Hiciste arte","Te valoraste","Te reinventaste","Vives feliz","Te motivaste","Te admiraste","Te escuchaste","Te fortaleciste","Te animaste","Te conectaste","Amaste más","Sonreíste siempre","Te conociste","Diste luz","Fuiste coherente","Te decidiste","Te emocionaste","Te elegiste","Te inspiraste","Te entregaste","Te aceptaste más","Te concentraste","Te iluminaste","Te abriste","Fuiste constante","Te expresaste","Te comprometiste","Te cuidaste más","Fuiste auténtico","Te admiraste más","Te recompensaste","Te desafiaste","Te entusiasmaste","Te valoraste más","Te tranquilizaste","Fuiste generoso","Te respetaste más","Diste alegría","Te mantuviste firme","Te transformaste más","Te conectaste más","Te fortaleciste más","Te inspiraste más","Te superaste más","Te liberaste más","Te amaste más","Brillaste más","Te enfocaste más","Te motivaste más","Te elevaste más","Te aceptaste plenamente","Te sonreíste más","Te iluminaste más","Te expresaste mejor","Te admiraste plenamente","Te emocionaste más","Te entregaste plenamente"];
+
+for(let i=1;i<=366;i++){
+    const base = palabras[(i-1) % palabras.length];
+    frases.push({
+        texto:`Día ${i}: ${base}`,
+        x: Math.random()*canvas.width,
+        y: Math.random()*canvas.height,
+        vx: (Math.random()-0.5)*0.15,
+        vy: (Math.random()-0.5)*0.15,
+        scale: 0.9,
+        alpha: 0
+    });
+}
+
+let fraseActiva=null;
+
+/* ===== CORAZONES ===== */
+const corazones = Array.from({length:30},()=>({
+    x:Math.random()*canvas.width,
+    y:canvas.height+Math.random()*canvas.height,
+    vy:0.2+Math.random()*0.3,
+    a:0.3+Math.random()*0.4,
+    s:0.7+Math.random()*0.5
+}));
+
+/* ===== CLICK ===== */
+canvas.addEventListener("click",e=>{
+
+    if(!iniciado){
+        const bx = canvas.width/2 - 170;
+        const by = canvas.height/2 + 110;
+        const bw = 340;
+        const bh = 50;
+
+        if(
+            e.offsetX > bx && e.offsetX < bx + bw &&
+            e.offsetY > by && e.offsetY < by + bh
+        ){
+            window.open(spotifyLink, "_blank");
+            return;
+        }
+
+        iniciado=true;
+        return;
+    }
+
+    const dx=e.offsetX-sol.x();
+    const dy=e.offsetY-sol.y();
+    if(Math.hypot(dx,dy)<sol.r){
+        mostrarMensajeSol=true;
+        tiempoMensaje=Date.now();
+        explosion(sol.x(),sol.y());
+        return;
+    }
+
+    fraseActiva=null;
+    frases.forEach(f=>{
+        if(Math.hypot(e.offsetX-f.x,e.offsetY-f.y)<50){
+            fraseActiva=f;
+        }
+    });
+});
+
+/* ===== LOOP ===== */
+function draw(){
+    ctx.clearRect(0,0,canvas.width,canvas.height);
+
+    if(!iniciado){
+        ctx.fillStyle="white";
+        estrellas.forEach(s=>ctx.fillRect(s.x,s.y,s.r,s.r));
+
+        if(Math.random()<0.2){
+            for(let i=0;i<3;i++) crearCometa();
+        }
+
+        cometas.forEach(c=>{
+            c.x+=Math.cos(c.ang)*c.vel;
+            c.y+=Math.sin(c.ang)*c.vel;
+            c.life--;
+            ctx.strokeStyle="rgba(200,220,255,0.6)";
+            ctx.beginPath();
+            ctx.moveTo(c.x,c.y);
+            ctx.lineTo(
+                c.x-Math.cos(c.ang)*40,
+                c.y-Math.sin(c.ang)*40
+            );
+            ctx.stroke();
+        });
+        for(let i=cometas.length-1;i>=0;i--){
+            if(cometas[i].life<=0) cometas.splice(i,1);
+        }
+
+        ctx.textAlign="center";
+        ctx.fillStyle="white";
+        ctx.font="26px Arial";
+        ctx.fillText(
+            "Cada frase es por un día que has superado hasta hoy.",
+            canvas.width/2,canvas.height/2-40
+        );
+        ctx.fillText(
+            "Y eso te ha hecho la hermosa persona que eres.",
+            canvas.width/2,canvas.height/2
+        );
+
+        ctx.font="22px Arial";
+        ctx.fillText(
+            "Feliz Año Nuevo a ti Niña que se esfuerza con el Corazón💖",
+            canvas.width/2,canvas.height/2+50
+        );
+
+        ctx.fillStyle="rgba(255,255,255,0.15)";
+        ctx.fillRect(canvas.width/2-170,canvas.height/2+110,340,50);
+        ctx.fillStyle="#fff2c2";
+        ctx.font="18px Arial";
+        ctx.fillText(
+            "🎶 Escuchar la canción",
+            canvas.width/2,
+            canvas.height/2+145
+        );
+
+        ctx.font="14px Arial";
+        ctx.fillStyle="rgba(255,255,255,0.7)";
+        ctx.fillText(
+            "Haz click en cualquier parte para comenzar",
+            canvas.width/2,
+            canvas.height/2+190
+        );
+
+        requestAnimationFrame(draw);
+        return;
+    }
+
+    ctx.fillStyle="white";
+    estrellas.forEach(s=>ctx.fillRect(s.x,s.y,s.r,s.r));
+
+    if(Math.random()<0.12) crearCometa();
+    cometas.forEach(c=>{
+        c.x+=Math.cos(c.ang)*c.vel;
+        c.y+=Math.sin(c.ang)*c.vel;
+        c.life--;
+        ctx.strokeStyle="rgba(200,220,255,0.7)";
+        ctx.beginPath();
+        ctx.moveTo(c.x,c.y);
+        ctx.lineTo(
+            c.x-Math.cos(c.ang)*50,
+            c.y-Math.sin(c.ang)*50
+        );
+        ctx.stroke();
+    });
+    for(let i=cometas.length-1;i>=0;i--){
+        if(cometas[i].life<=0) cometas.splice(i,1);
+    }
+
+    const cx=sol.x(), cy=sol.y();
+    const grad=ctx.createRadialGradient(cx-30,cy-30,30,cx,cy,sol.r);
+    grad.addColorStop(0,"#fffbe6");
+    grad.addColorStop(0.4,"#ffd966");
+    grad.addColorStop(1,"#ff6a00");
+    ctx.fillStyle=grad;
+    ctx.beginPath();
+    ctx.arc(cx,cy,sol.r,0,Math.PI*2);
+    ctx.fill();
+
+    particulas.forEach(p=>{
+        p.x+=p.vx;
+        p.y+=p.vy;
+        p.life--;
+        ctx.globalAlpha=p.life/60;
+        ctx.fillStyle="#ffd966";
+        ctx.beginPath();
+        ctx.arc(p.x,p.y,p.r,0,Math.PI*2);
+        ctx.fill();
+    });
+    ctx.globalAlpha=1;
+
+    frases.forEach(f=>{
+        f.x+=f.vx; f.y+=f.vy;
+        if(f.x<0||f.x>canvas.width) f.vx*=-1;
+        if(f.y<0||f.y>canvas.height) f.vy*=-1;
+        if(f.alpha<1) f.alpha+=0.01;
+
+        f.scale+=(fraseActiva===f?1.6:0.9-f.scale)*0.08;
+
+        ctx.save();
+        ctx.translate(f.x,f.y);
+        ctx.scale(f.scale,f.scale);
+        ctx.globalAlpha=f.alpha;
+        ctx.fillStyle="#ffe6b8";
+        ctx.font="13px Arial";
+        ctx.fillText(f.texto,0,0);
+        ctx.restore();
+    });
+
+    corazones.forEach(c=>{
+        c.y-=c.vy;
+        if(c.y<-20) c.y=canvas.height+20;
+        ctx.globalAlpha=c.a;
+        ctx.font=`${18*c.s}px Arial`;
+        ctx.fillStyle="#ff9bbd";
+        ctx.fillText("❤",c.x,c.y);
+    });
+    ctx.globalAlpha=1;
+
+    /* ===== MENSAJE DEL SOL (FEMENINO) ===== */
+    if(mostrarMensajeSol){
+        ctx.fillStyle="rgba(0,0,0,0.75)";
+        ctx.fillRect(cx-400,cy-55,800,110);
+        ctx.fillStyle="#fff2c2";
+        ctx.font="22px Georgia";
+        ctx.textAlign="center";
+        ctx.fillText(
+            "Chaque pas que tu fais en vaut la peine.",
+            cx,cy-5
+        );
+        ctx.fillText(
+            "Vis, souris et fais-le pour toi. Ne cesse jamais d'être toi-même, quoi qu'il arrive. Tu es formidable.",
+            cx,cy+25
+        );
+        if(Date.now()-tiempoMensaje>6000){
+            mostrarMensajeSol=false;
+        }
+    }
+
+    requestAnimationFrame(draw);
+}
+draw();
+</script>
+</body>
+</html>
